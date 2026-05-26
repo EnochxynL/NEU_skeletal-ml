@@ -97,7 +97,9 @@ def show_skeleton_3d(filepath, model, save_gif=False):
         ax.set_xlim(xmin - pad, xmax + pad)
         ax.set_ylim(ymin - pad, ymax + pad)
         ax.set_zlim(zmin - pad, zmax + pad)
-        ax.view_init(elev=15, azim=-70)
+        # NTU RGB-D 坐标系: x=左右, y=上下, z=深度(朝向相机)
+        # elev=10 azim=-90 从侧面平视，人"站立"而非"躺倒"
+        ax.view_init(elev=10, azim=-90)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
@@ -185,7 +187,7 @@ def show_skeleton_static(filepath, model, num_frames=4):
         ax.set_xlim(xall.min() - pad, xall.max() + pad)
         ax.set_ylim(yall.min() - pad, yall.max() + pad)
         ax.set_zlim(zall.min() - pad, zall.max() + pad)
-        ax.view_init(elev=10, azim=-70)
+        ax.view_init(elev=10, azim=-90)
         ax.set_title(f'Frame {idx+1}/{T}', fontsize=10)
 
     # 右下角放概率图
