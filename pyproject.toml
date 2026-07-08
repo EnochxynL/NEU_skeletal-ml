@@ -16,6 +16,7 @@ dependencies = [
 skeletal-train = "skeletal_ml.cli.train:main"
 skeletal-eval = "skeletal_ml.cli.evaluate:main"
 skeletal-predict = "skeletal_ml.cli.predict:main"
+skeletal-show = "skeletal_ml.cli.show:main"
 
 [build-system]
 requires = ["hatchling"]

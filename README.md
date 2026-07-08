@@ -45,6 +45,9 @@ export NEU_DATA_DIR=/path/to/实验数据
 三个入口点（`uv sync` 后可用）：
 
 ```bash
+# 0. 单纯播放动作
+uv run skeletal-show data/test/S008C003P025R002A002.skeleton
+
 # 1. 复现全部结果：训练 4 个模型 + 生成混淆矩阵/对比图（→ outputs/）
 uv run skeletal-eval
 
@@ -52,7 +55,7 @@ uv run skeletal-eval
 uv run skeletal-train
 
 # 3. 单样本推理 + 骨架可视化（显示预测/真实标签）
-uv run skeletal-predict ../NEU_data/实验数据/test/S001C001P001R002A001.skeleton
+uv run skeletal-predict data/test/S001C001P001R002A001.skeleton
 uv run skeletal-predict <file.skeleton> --gif   # 保存 GIF 动画
 ```
 
