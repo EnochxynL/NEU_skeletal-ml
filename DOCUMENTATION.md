@@ -238,12 +238,12 @@ $$F1_c = 2 \cdot \frac{\text{Precision}_c \cdot \text{Recall}_c}{\text{Precision
 
 ### 5.5 案例分析
 
-使用 `show_predict.py` 脚本对单个骨架文件进行可视化，同时显示模型预测标签、真实标签及 Top-5 概率分布。
+使用 `predict.py` 脚本对单个骨架文件进行可视化，同时显示模型预测标签、真实标签及 Top-5 概率分布。
 
 **正例：sit down 被正确识别**
 
 ```bash
-$ uv run python show_predict.py ../NEU_data/实验数据/test/S010C001P018R001A008.skeleton
+$ uv run skeletal-predict data/test/S010C001P018R001A008.skeleton
 ```
 
 ```
@@ -262,7 +262,7 @@ $ uv run python show_predict.py ../NEU_data/实验数据/test/S010C001P018R001A0
 **反例：eat meal 被自信地误判为 brush hair**
 
 ```bash
-$ uv run python show_predict.py ../NEU_data/实验数据/test/S008C003P025R002A002.skeleton
+$ uv run skeletal-predict data/test/S008C003P025R002A002.skeleton
 ```
 
 ```
@@ -276,12 +276,14 @@ $ uv run python show_predict.py ../NEU_data/实验数据/test/S008C003P025R002A0
     5. [0] drink water     0.009
 ```
 
-这是**最危险的错误模式**——模型以 91.1% 的极高置信度将 eat meal 错判为 brush hair，且真实类别 eat meal 甚至未进入 Top-5。eat meal 和 brush hair 的动作模式高度相似：两者都是手部在头部附近做往复运动（吃饭时手从桌面到嘴边，梳头时手在头部附近移动）。纯统计特征（均值/方差/偏度）将这两种运动模式的时序统计量压缩为相似的值，丢失了关键的时序顺序和运动方向信息。这提示后续改进方向：引入时序建模（如 DTW 距离特征）或频域特征（傅里叶描述子）来捕获运动的先后顺序。
+打开文件查看后发现，这是文件本身的错误。这个特定文件 `S008C003P025R002A002.skeleton` 中的所有 79 帧的 `body` 计数都是 **0**——即在采集过程中，Kinect 传感器完全没有检测到人体。
+
+解析函数 `parse_skeleton` 在 `data_loader.py:30` 按帧循环时为 `num_body=0` 时跳过所有关节读取，因此 `(79, 25, 3)` 的坐标矩阵保持全零。中心化后依旧全是 `(0,0,0)`，所以 25 个关节全都挤在原点上，肉眼只看到一个点。
 
 **反例：drink water 边缘正确**
 
 ```bash
-$ uv run python show_predict.py ../NEU_data/实验数据/test/S009C002P016R001A001.skeleton
+$ uv run skeletal-predict data/test/S009C002P016R001A001.skeleton
 ```
 
 ```
@@ -296,6 +298,8 @@ $ uv run python show_predict.py ../NEU_data/实验数据/test/S009C002P016R001A0
 ```
 
 虽然最终预测正确，但置信度仅 49.6%，brush teeth 以 31.1% 紧随其后。drink water、brush teeth 和 eat meal 三个"手—头"交互动作构成了一个易混淆的子群，也是整个数据集中识别难度最大的类别组。
+
+eat meal 和 brush hair 的动作模式高度相似：两者都是手部在头部附近做往复运动（吃饭时手从桌面到嘴边，梳头时手在头部附近移动）。纯统计特征（均值/方差/偏度）将这两种运动模式的时序统计量压缩为相似的值，丢失了关键的时序顺序和运动方向信息。这提示后续改进方向：引入时序建模（如 DTW 距离特征）或频域特征（傅里叶描述子）来捕获运动的先后顺序。
 
 ---
 

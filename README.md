@@ -21,7 +21,7 @@ NEU_legacy_solution/
 │           ├── train.py        # 网格搜索调参
 │           ├── evaluate.py     # 最优参数训练 + 出图
 │           ├── predict.py      # 单样本推理 + 骨架可视化
-│           └── show_skeleton.py  # 遗留骨架动画
+│           └── show.py  # 遗留骨架动画
 ├── tests/
 │   └── test_data_loader.py
 └── outputs/                 # 生成的图片（git 忽略）
@@ -80,4 +80,4 @@ uv run pytest
 | SVM (Linear) | 75.33% |
 | AdaBoost | 67.67% |
 
-完整分析见项目根目录的 `NEU_report.md`。
+完整分析见项目根目录的 `DOCUMENTATION.md`。
