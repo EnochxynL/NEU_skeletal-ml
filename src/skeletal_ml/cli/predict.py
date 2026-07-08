@@ -2,8 +2,10 @@
 骨架动作可视化 —— 显示 3D 骨架 + 预测标签 + 真实标签
 
 用法:
-    uv run python show_predict.py ../NEU_data/实验数据/test/S010C001P018R001A008.skeleton
-    uv run python show_predict.py ../NEU_data/实验数据/train/S001C001P001R001A005.skeleton
+    uv run skeletal-predict <path/to/file.skeleton>
+    uv run skeletal-predict <path/to/file.skeleton> --gif
+    # 或
+    uv run python scripts/show_predict.py <path/to/file.skeleton>
 """
 import sys
 import os
@@ -12,8 +14,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
-from data_loader import parse_skeleton, BONES
-from feature_extraction import extract_features
+from skeletal_ml.data_loader import parse_skeleton, BONES
+from skeletal_ml.feature_extraction import extract_features
+from skeletal_ml.paths import DATA_DIR, ensure_output_dir
 
 # ---- 动作名称 ----
 ACTION_NAMES = [
@@ -29,10 +32,10 @@ def load_model():
     from sklearn.svm import SVC
     from sklearn.pipeline import Pipeline
 
-    from data_loader import load_dataset
-    from feature_extraction import extract_features_batch
+    from skeletal_ml.data_loader import load_dataset
+    from skeletal_ml.feature_extraction import extract_features_batch
 
-    data_dir = '../NEU_data/实验数据'
+    data_dir = str(DATA_DIR)
     print('加载训练数据...', end=' ', flush=True)
     X_train_seq, y_train, _, _ = load_dataset(data_dir)
     X_train = extract_features_batch(X_train_seq)
@@ -140,7 +143,8 @@ def show_skeleton_3d(filepath, model, save_gif=False):
                         interval=50, blit=False, repeat=True)
 
     if save_gif:
-        out = filepath.replace('.skeleton', '_pred.gif')
+        base = os.path.basename(filepath).replace('.skeleton', '_pred.gif')
+        out = str(ensure_output_dir() / base)
         ani.save(out, writer='pillow', fps=20, dpi=80)
         print(f'GIF saved: {out}')
     else:
@@ -194,7 +198,8 @@ def show_skeleton_static(filepath, model, num_frames=4):
     plt.tight_layout()
 
     # 保存静态图
-    out = filepath.replace('.skeleton', '_pred.png')
+    base = os.path.basename(filepath).replace('.skeleton', '_pred.png')
+    out = str(ensure_output_dir() / base)
     plt.savefig(out, dpi=150, bbox_inches='tight')
     print(f'Static saved: {out}')
 

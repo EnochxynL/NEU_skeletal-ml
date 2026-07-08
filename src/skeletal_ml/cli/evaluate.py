@@ -11,9 +11,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, classification_report
 
-from data_loader import load_dataset
-from feature_extraction import extract_features_batch
-from visualization import plot_confusion_matrices, plot_comparison
+from skeletal_ml.data_loader import load_dataset
+from skeletal_ml.feature_extraction import extract_features_batch
+from skeletal_ml.visualization import plot_confusion_matrices, plot_comparison
+from skeletal_ml.paths import DATA_DIR, ensure_output_dir, check_data
 
 ACTION_NAMES = [
     'drink water', 'eat meal', 'brush teeth', 'brush hair', 'drop',
@@ -21,9 +22,10 @@ ACTION_NAMES = [
 ]
 
 def main():
-    data_dir = '../NEU_data/实验数据'
+    check_data()
+    out_dir = ensure_output_dir()
     print('加载数据/提取特征...')
-    Xtr_seq, y_train, Xte_seq, y_test = load_dataset(data_dir)
+    Xtr_seq, y_train, Xte_seq, y_test = load_dataset(str(DATA_DIR))
     X_train = extract_features_batch(Xtr_seq)
     X_test = extract_features_batch(Xte_seq)
     print(f'特征: {X_train.shape}')
@@ -84,9 +86,9 @@ def main():
 
     # 生成可视化
     print('\n生成可视化...')
-    plot_confusion_matrices(results, 'confusion_matrices.png')
-    plot_comparison(results, 'model_comparison.png')
-    print('Done!')
+    plot_confusion_matrices(results, str(out_dir / 'confusion_matrices.png'))
+    plot_comparison(results, str(out_dir / 'model_comparison.png'))
+    print(f'Done! 图片已保存至 {out_dir}')
 
     return results
 

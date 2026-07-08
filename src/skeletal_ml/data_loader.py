@@ -122,8 +122,8 @@ BONES = [
 
 if __name__ == '__main__':
     # 快速测试
-    import sys
-    data_path = '../NEU_data/实验数据'
+    from skeletal_ml.paths import DATA_DIR
+    data_path = str(DATA_DIR)
     if os.path.isdir(data_path):
         X_train, y_train, X_test, y_test = load_dataset(data_path)
         print(f'Train: {len(X_train)} sequences, labels: {np.bincount(y_train)}')

@@ -179,5 +179,7 @@ def main():
     
     Print2D(num_frame, point, arms, rightHand, leftHand, legs, body)  # 2D可视化
     #Print3D(num_frame, point, arms, rightHand, leftHand, legs, body) # 3D可视化
- 
-main()
+
+
+if __name__ == '__main__':
+    main()

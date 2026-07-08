@@ -16,7 +16,7 @@
 import numpy as np
 from scipy.stats import skew
 from typing import List
-from data_loader import BONES
+from .data_loader import BONES
 
 
 def temporal_stats(seq: np.ndarray, axis: int = 0) -> np.ndarray:
@@ -259,10 +259,11 @@ def extract_features_batch(sequences: List[np.ndarray]) -> np.ndarray:
 
 
 if __name__ == '__main__':
-    from data_loader import load_dataset
     import os
-    
-    data_path = '../NEU_data/实验数据'
+    from skeletal_ml.data_loader import load_dataset
+    from skeletal_ml.paths import DATA_DIR
+
+    data_path = str(DATA_DIR)
     if os.path.isdir(data_path):
         X_train_seq, y_train, X_test_seq, y_test = load_dataset(data_path)
         

@@ -14,8 +14,9 @@ from sklearn.model_selection import StratifiedKFold, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.pipeline import Pipeline
 
-from data_loader import load_dataset
-from feature_extraction import extract_features_batch
+from skeletal_ml.data_loader import load_dataset
+from skeletal_ml.feature_extraction import extract_features_batch
+from skeletal_ml.paths import DATA_DIR, check_data
 
 ACTION_NAMES = [
     'drink water', 'eat meal', 'brush teeth', 'brush hair', 'drop',
@@ -51,7 +52,8 @@ def evaluate_model(name, pipe, param_grid, X_train, y_train, X_test, y_test, cv=
 
 
 def main():
-    data_dir = '../NEU_data/实验数据'
+    check_data()
+    data_dir = str(DATA_DIR)
     print('=== 加载数据 ===')
     X_train_seq, y_train, X_test_seq, y_test = load_dataset(data_dir)
     print(f'Train: {len(X_train_seq)}, Test: {len(X_test_seq)}')

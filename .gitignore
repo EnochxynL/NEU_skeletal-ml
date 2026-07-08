@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# 虚拟环境
+.venv/
+venv/
+
+# 生成的输出（图片等）
+outputs/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+
+# 数据集预测产物（若误存到数据目录）
+*_pred.png
+*_pred.gif
