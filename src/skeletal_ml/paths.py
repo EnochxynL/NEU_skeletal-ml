@@ -11,7 +11,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 # 数据集默认在项目根的上一级: ../NEU_data/实验数据
-_DEFAULT_DATA_DIR = PROJECT_ROOT.parent / "NEU_data" / "实验数据"
+_DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 
 # 允许环境变量覆盖
 DATA_DIR = Path(os.environ.get("NEU_DATA_DIR", _DEFAULT_DATA_DIR))

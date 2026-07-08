@@ -61,6 +61,15 @@ def predict_single(model, filepath):
     return pred, ACTION_NAMES[pred], probs
 
 
+def rotate_x90(coords):
+    """绕 X 正半轴旋转 90°（右手定则）: x'=x, y'=-z, z'=y"""
+    rotated = np.empty_like(coords)
+    rotated[..., 0] = coords[..., 0]
+    rotated[..., 1] = -coords[..., 2]
+    rotated[..., 2] = coords[..., 1]
+    return rotated
+
+
 def show_skeleton_3d(filepath, model, save_gif=False):
     """
     3D 骨架动画，标题显示预测标签和真实标签。
@@ -82,6 +91,7 @@ def show_skeleton_3d(filepath, model, save_gif=False):
 
     # 中心化
     coords = coords - coords[:, 0:1, :]
+    coords = rotate_x90(coords)
 
     # 坐标范围
     xmin, xmax = coords[:, :, 0].min(), coords[:, :, 0].max()
@@ -158,6 +168,7 @@ def show_skeleton_static(filepath, model, num_frames=4):
     coords = parse_skeleton(filepath)
     T = coords.shape[0]
     coords = coords - coords[:, 0:1, :]
+    coords = rotate_x90(coords)
 
     pred_label, pred_name, probs = predict_single(model, filepath)
 

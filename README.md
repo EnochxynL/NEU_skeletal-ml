@@ -52,7 +52,7 @@ uv run skeletal-eval
 uv run skeletal-train
 
 # 3. 单样本推理 + 骨架可视化（显示预测/真实标签）
-uv run skeletal-predict ../NEU_data/实验数据/test/S008C003P025R002A002.skeleton
+uv run skeletal-predict ../NEU_data/实验数据/test/S001C001P001R002A001.skeleton
 uv run skeletal-predict <file.skeleton> --gif   # 保存 GIF 动画
 ```
 
