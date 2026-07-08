@@ -18,6 +18,7 @@ from skeletal_ml.data_loader import parse_skeleton, BONES
 from skeletal_ml.feature_extraction import extract_features
 from skeletal_ml.paths import DATA_DIR, ensure_output_dir
 
+
 # ---- 动作名称 ----
 ACTION_NAMES = [
     'drink water', 'eat meal', 'brush teeth', 'brush hair', 'drop',
@@ -61,15 +62,6 @@ def predict_single(model, filepath):
     return pred, ACTION_NAMES[pred], probs
 
 
-def rotate_x90(coords):
-    """绕 X 正半轴旋转 90°（右手定则）: x'=x, y'=-z, z'=y"""
-    rotated = np.empty_like(coords)
-    rotated[..., 0] = coords[..., 0]
-    rotated[..., 1] = -coords[..., 2]
-    rotated[..., 2] = coords[..., 1]
-    return rotated
-
-
 def show_skeleton_3d(filepath, model, save_gif=False):
     """
     3D 骨架动画，标题显示预测标签和真实标签。
@@ -91,7 +83,8 @@ def show_skeleton_3d(filepath, model, save_gif=False):
 
     # 中心化
     coords = coords - coords[:, 0:1, :]
-    coords = rotate_x90(coords)
+    coords = coords[..., [0, 2, 1]]    # NTU→显示: y→-z, z→y
+    coords[..., 1] *= -1
 
     # 坐标范围
     xmin, xmax = coords[:, :, 0].min(), coords[:, :, 0].max()
@@ -168,7 +161,8 @@ def show_skeleton_static(filepath, model, num_frames=4):
     coords = parse_skeleton(filepath)
     T = coords.shape[0]
     coords = coords - coords[:, 0:1, :]
-    coords = rotate_x90(coords)
+    coords = coords[..., [0, 2, 1]]    # NTU→显示: y→-z, z→y
+    coords[..., 1] *= -1
 
     pred_label, pred_name, probs = predict_single(model, filepath)
 
