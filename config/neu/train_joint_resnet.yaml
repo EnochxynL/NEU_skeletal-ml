@@ -1,0 +1,39 @@
+# ResNet+VirtualRadar — requires nnAudio (pip install nnAudio)
+# The VirtualRadar converts skeleton data to spectrograms, then ResNet18 classifies.
+work_dir: ./work_dir/neu/resnet_joint
+model_saved_name: ./runs/neu_resnet_joint
+feeder: skeletal_dl.feeders.feeder.Feeder
+train_feeder_args:
+  data_path: ./data/neu/train_data_joint.npy
+  label_path: ./data/neu/train_label.pkl
+  debug: false
+  random_choose: false
+  random_shift: false
+  random_move: false
+  window_size: -1
+  normalization: false
+test_feeder_args:
+  data_path: ./data/neu/val_data_joint.npy
+  label_path: ./data/neu/val_label.pkl
+model: skeletal_dl.model.resnet.Model
+model_args:
+  num_class: 10
+  num_point: 25
+  num_person: 2
+  graph: skeletal_dl.graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: spatial
+  num_filters: 64
+  image_size: 256
+  wavelength: 0.0005
+weight_decay: 0.0001
+base_lr: 0.1
+step:
+- 20
+- 30
+device:
+- 0
+batch_size: 16
+test_batch_size: 16
+num_epoch: 40
+nesterov: true

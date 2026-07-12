@@ -18,6 +18,11 @@ outputs/
 .idea/
 .DS_Store
 
+# 数据 & 模型权重（太大，不进 git）
+data/neu/
+runs/
+work_dir/
+
 # 数据集预测产物（若误存到数据目录）
 *_pred.png
 *_pred.gif

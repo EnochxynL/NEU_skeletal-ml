@@ -24,7 +24,7 @@ def _import_class(name):
 class SpatioTemporalGraphConv(nn.Module):
     """ST-GIN block: spatial GIN → BN → ReLU → temporal Conv → BN → +residual → ReLU."""
     def __init__(self, in_channels, out_channels, kernel_size=(3, 9),
-                 stride=1, residual=True):
+                 stride=1, residual=True, dropout=0):
         super().__init__()
         half = out_channels // 2
         self.sgcn = GraphIsoConvTD(in_channels, [half, half],
@@ -45,6 +45,7 @@ class SpatioTemporalGraphConv(nn.Module):
                 _bn_init(m, 1)
 
         self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout2d(dropout) if dropout else None
         self._residual_flag = residual
         self._residual = None
 
@@ -69,12 +70,15 @@ class SpatioTemporalGraphConv(nn.Module):
         x, A = self.sgcn(x, A)
         x = self.tcn(x)
         x = x + res
-        return self.relu(x), A
+        x = self.relu(x)
+        if self.dropout is not None:
+            x = self.dropout(x)
+        return x, A
 
 
 class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2,
-                 graph=None, graph_args=dict(), in_channels=3):
+                 graph=None, graph_args=dict(), in_channels=3, dropout=0):
         super().__init__()
         if graph is None:
             raise ValueError(
@@ -88,16 +92,16 @@ class Model(nn.Module):
         _bn_init(self.data_bn, 1)
 
         self.layers = nn.ModuleList([
-            SpatioTemporalGraphConv(in_channels, 64, residual=False),
-            SpatioTemporalGraphConv(64, 64),
-            SpatioTemporalGraphConv(64, 64),
-            SpatioTemporalGraphConv(64, 64),
-            SpatioTemporalGraphConv(64, 128, stride=2),
-            SpatioTemporalGraphConv(128, 128),
-            SpatioTemporalGraphConv(128, 128),
-            SpatioTemporalGraphConv(128, 256, stride=2),
-            SpatioTemporalGraphConv(256, 256),
-            SpatioTemporalGraphConv(256, 256),
+            SpatioTemporalGraphConv(in_channels, 64, residual=False, dropout=dropout),
+            SpatioTemporalGraphConv(64, 64, dropout=dropout),
+            SpatioTemporalGraphConv(64, 64, dropout=dropout),
+            SpatioTemporalGraphConv(64, 64, dropout=dropout),
+            SpatioTemporalGraphConv(64, 128, stride=2, dropout=dropout),
+            SpatioTemporalGraphConv(128, 128, dropout=dropout),
+            SpatioTemporalGraphConv(128, 128, dropout=dropout),
+            SpatioTemporalGraphConv(128, 256, stride=2, dropout=dropout),
+            SpatioTemporalGraphConv(256, 256, dropout=dropout),
+            SpatioTemporalGraphConv(256, 256, dropout=dropout),
         ])
 
         self.fcn = nn.Conv2d(256, num_class, kernel_size=1)

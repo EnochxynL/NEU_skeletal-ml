@@ -14,6 +14,7 @@ dependencies = [
     "tensorboardx>=2.0",
     "tqdm>=4.60",
     "pyyaml>=6.0",
+    "nnaudio>=0.3.0",
 ]
 
 [project.scripts]

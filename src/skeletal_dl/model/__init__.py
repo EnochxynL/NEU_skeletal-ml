@@ -1,1 +1,1 @@
-from . import agcn, aagcn, gcn_blocks, stgcn, stgin, stpgcn, stpgcnp, resnet, resnet18
+from . import agcn, agcn_dropout, aagcn, gcn_blocks, stgcn, stgin, stpgcn, stpgcnp, resnet, resnet18
