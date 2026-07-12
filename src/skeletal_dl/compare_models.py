@@ -29,6 +29,8 @@ plt.rcParams["axes.unicode_minus"] = False
 
 VAL_DATA = "./data/neu/val_data_joint.npy"
 VAL_LABEL = "./data/neu/val_label.pkl"
+PT_DATA = "D:/ACTIVE/NEUAI/mmskeleton/data/NEU/test_data.npy"
+PT_LABEL = "D:/ACTIVE/NEUAI/mmskeleton/data/NEU/test_label.pkl"
 PRETRAINED_CKPT = "D:/ACTIVE/NEUAI/mmskeleton/checkpoints/st_gcn.ntu-xsub-300b57d4.pth"
 OUTPUT_DIR = "outputs"
 BATCH_SIZE = 32
@@ -49,6 +51,7 @@ MODEL_ENTRIES = [
     {
         "name": "ST-GCN (+augmentation)",
         "key": "stgcn_aug",
+        "ckpt_pattern": "runs/neu_stgcn_joint_aug-*.pt",
         "model": "skeletal_dl.model.stgcn.Model",
         "num_class": 10,
         "model_args": {
@@ -59,6 +62,7 @@ MODEL_ENTRIES = [
     {
         "name": "ST-GCN (+LR+dropout)",
         "key": "stgcn_lr",
+        "ckpt_pattern": "runs/neu_stgcn_joint_lr-*.pt",
         "model": "skeletal_dl.model.stgcn.Model",
         "num_class": 10,
         "model_args": {
@@ -80,6 +84,7 @@ MODEL_ENTRIES = [
     {
         "name": "AGCN (+dropout)",
         "key": "agcn_dropout",
+        "ckpt_pattern": "runs/neu_agcn_joint_dropout-*.pt",
         "model": "skeletal_dl.model.agcn_dropout.Model",
         "num_class": 10,
         "model_args": {
@@ -122,9 +127,9 @@ def _import_class(name):
     return getattr(importlib.import_module(module_path), class_name)
 
 
-def find_latest_ckpt(key):
-    """Find the latest checkpoint for a given run key."""
-    pattern = f"runs/neu_{key}_joint-*.pt"
+def find_latest_ckpt(entry):
+    """Find the latest checkpoint for a given model entry."""
+    pattern = entry.get("ckpt_pattern", f"runs/neu_{entry['key']}_joint-*.pt")
     files = glob.glob(pattern)
     if not files:
         return None
@@ -145,6 +150,12 @@ class SkeletonDataset(Dataset):
 
 
 def load_pretrained_stgcn():
+    """Build ST-GCN with the original paper's spatial graph partitioning.
+
+    The mmskeleton pre-trained weights were trained with the original
+    root/centripetal/centrifugal partitioning, not the 2s-AGCN inward/outward
+    partitioning used elsewhere in this project.
+    """
     from skeletal_dl.model.stgcn import Model
 
     model = Model(
@@ -152,11 +163,79 @@ def load_pretrained_stgcn():
         graph="skeletal_dl.graph.ntu_rgb_d.Graph",
         graph_args={"labeling_mode": "spatial"},
     )
+    # Replace with original ST-GCN graph (matches pre-trained weights)
+    ref_A = _build_pretrained_graph()
+    model.register_buffer('A', torch.tensor(ref_A, dtype=torch.float32))
+
     ckpt = torch.load(PRETRAINED_CKPT, map_location="cpu")
     state_dict = ckpt.get("state_dict", ckpt)
     model.load_state_dict(state_dict, strict=True)
     model.eval()
     return model, 60
+
+
+def _build_pretrained_graph():
+    """Original ST-GCN spatial adjacency matrix (paper version).
+
+    Root / centripetal / centrifugal partitioning with global normalization.
+    The pre-trained edge_importance weights were trained on this graph.
+    """
+    num_node = 25
+    self_link = [(i, i) for i in range(num_node)]
+    neighbor_1base = [(1, 2), (2, 21), (3, 21), (4, 3), (5, 21),
+                      (6, 5), (7, 6), (8, 7), (9, 21), (10, 9),
+                      (11, 10), (12, 11), (13, 1), (14, 13),
+                      (15, 14), (16, 15), (17, 1), (18, 17),
+                      (19, 18), (20, 19), (22, 23), (23, 8),
+                      (24, 25), (25, 12)]
+    neighbor_link = [(i - 1, j - 1) for (i, j) in neighbor_1base]
+    edge = self_link + neighbor_link
+    center = 21 - 1
+
+    max_hop = 1
+    A_mat = np.zeros((num_node, num_node))
+    for i, j in edge:
+        A_mat[j, i] = 1
+        A_mat[i, j] = 1
+
+    hop_dis = np.zeros((num_node, num_node)) + np.inf
+    transfer_mat = [np.linalg.matrix_power(A_mat, d) for d in range(max_hop + 1)]
+    arrive_mat = np.stack(transfer_mat) > 0
+    for d in range(max_hop, -1, -1):
+        hop_dis[arrive_mat[d]] = d
+
+    adjacency = np.zeros((num_node, num_node))
+    for hop in range(max_hop + 1):
+        adjacency[hop_dis == hop] = 1
+    Dl = np.sum(adjacency, axis=0)
+    Dn = np.zeros((num_node, num_node))
+    for i in range(num_node):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i] ** (-1)
+    normalize_adjacency = np.dot(adjacency, Dn)
+
+    valid_hop = range(0, max_hop + 1)
+    A = []
+    for hop in valid_hop:
+        a_root = np.zeros((num_node, num_node))
+        a_close = np.zeros((num_node, num_node))
+        a_further = np.zeros((num_node, num_node))
+        for i in range(num_node):
+            for j in range(num_node):
+                if hop_dis[j, i] == hop:
+                    if hop_dis[j, center] == hop_dis[i, center]:
+                        a_root[j, i] = normalize_adjacency[j, i]
+                    elif hop_dis[j, center] > hop_dis[i, center]:
+                        a_close[j, i] = normalize_adjacency[j, i]
+                    else:
+                        a_further[j, i] = normalize_adjacency[j, i]
+        if hop == 0:
+            A.append(a_root)
+        else:
+            A.append(a_root + a_close)
+            A.append(a_further)
+
+    return np.stack(A)
 
 
 def load_trained_model(entry, ckpt_path):
@@ -236,25 +315,33 @@ def main():
     dataset = SkeletonDataset(VAL_DATA, VAL_LABEL)
     loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=False,
                         num_workers=0, pin_memory=True)
-    print(f"Test set: {len(dataset)} samples, {len(set(dataset.labels))} classes\n")
+    print(f"Test set (pre_normalized): {len(dataset)} samples, {len(set(dataset.labels))} classes")
+
+    # Separate dataset for pre-trained model (raw coords, no pre_normalization)
+    pt_dataset = SkeletonDataset(PT_DATA, PT_LABEL) if os.path.exists(PT_DATA) else None
+    if pt_dataset:
+        pt_loader = DataLoader(pt_dataset, batch_size=BATCH_SIZE, shuffle=False,
+                               num_workers=0, pin_memory=True)
+        print(f"PT test set (raw): {len(pt_dataset)} samples, {len(set(pt_dataset.labels))} classes")
+    print()
 
     results = []
 
-    # 1. Pre-trained ST-GCN (zero-shot)
+    # 1. Pre-trained ST-GCN (zero-shot, uses raw data without pre_normalization)
     print(f"{'=' * 60}")
     print("[PT] ST-GCN (NTU-60 X-Sub pre-trained)")
-    if os.path.exists(PRETRAINED_CKPT):
+    if os.path.exists(PRETRAINED_CKPT) and pt_dataset is not None:
         model, num_class = load_pretrained_stgcn()
         model = model.to(device)
         n_params = sum(p.numel() for p in model.parameters()) / 1e6
-        top1, top5, _, _ = evaluate(model, num_class, loader, device)
+        top1, top5, _, _ = evaluate(model, num_class, pt_loader, device)
         print(f"  Params: {n_params:.2f}M  |  Top-1: {top1 * 100:.2f}%  |  Top-5: {top5 * 100:.2f}%")
         results.append({
             "name": "ST-GCN (pre-trained NTU-60)",
             "top1": top1, "top5": top5, "params_m": n_params,
         })
     else:
-        print("  SKIP — checkpoint not found")
+        print("  SKIP — checkpoint or raw data not found")
     print()
 
     # 2. Trained models (auto-discover checkpoints)
@@ -262,9 +349,9 @@ def main():
         print(f"{'=' * 60}")
         print(f"[{entry['key']}] {entry['name']}")
 
-        ckpt_path = find_latest_ckpt(entry["key"])
+        ckpt_path = find_latest_ckpt(entry)
         if ckpt_path is None:
-            print(f"  SKIP — no checkpoint found (runs/neu_{entry['key']}_joint-*.pt)")
+            print(f"  SKIP — no checkpoint found")
             print()
             continue
 

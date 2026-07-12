@@ -49,7 +49,7 @@ class SpatioTemporalGraphConv(nn.Module):
         self._residual_flag = residual
         self._residual = None
 
-    def _build_residual(self, in_ch, out_ch, stride):
+    def _build_residual(self, in_ch, out_ch, stride, device):
         if not self._residual_flag:
             self._residual = lambda x: 0
         elif in_ch == out_ch and stride == 1:
@@ -58,14 +58,14 @@ class SpatioTemporalGraphConv(nn.Module):
             self._residual = nn.Sequential(
                 nn.Conv2d(in_ch, out_ch, kernel_size=1, stride=(stride, 1)),
                 nn.BatchNorm2d(out_ch),
-            )
+            ).to(device)
             _conv_init(self._residual[0])
             _bn_init(self._residual[1], 1)
 
     def forward(self, x, A):
         if self._residual is None:
             stride = self.tcn[2].stride[0]
-            self._build_residual(x.size(1), self.tcn[2].out_channels, stride)
+            self._build_residual(x.size(1), self.tcn[2].out_channels, stride, x.device)
         res = self._residual(x)
         x, A = self.sgcn(x, A)
         x = self.tcn(x)
