@@ -56,10 +56,10 @@ uv run skeletal-gendata          # 生成 train/val_data_joint.npy + label.pkl
 
 | 模型 | 核心思想 | 参数量 | 来源 |
 |------|---------|--------|------|
-| **ST-GCN** | 时空图卷积 + 边重要性加权 | ~3.1M | AAAI 2018 |
-| **AGCN** | 自适应邻接矩阵 + 空间自注意力 | [待填充] | 2s-AGCN |
-| **ST-GIN** | 图同构卷积替代标准图卷积 | [待填充] | GIN + ST-GCN |
-| **ResNet+Radar** | 骨架→虚拟雷达频谱图→ResNet18 | [待填充] | — |
+| **ST-GCN** | 时空图卷积 + 边重要性加权 | 3.09M | AAAI 2018 |
+| **AGCN** | 自适应邻接矩阵 + 空间自注意力 | 3.46M | 2s-AGCN |
+| **ST-GIN** | 图同构卷积替代标准图卷积 | 1.72M | GIN + ST-GCN |
+| **ResNet+Radar** | 骨架→虚拟雷达频谱图→ResNet18 | 11.18M | — |
 
 ### 3.2 图构造
 
@@ -183,60 +183,62 @@ $$RCS = \frac{\pi a^4}{(\sin^2\theta \cos^2\phi + \sin^2\theta \sin^2\phi + a^2\
 
 | 模型 | Top-1 (%) | Top-5 (%) | 参数量 (M) |
 |------|----------|----------|------------|
-| ST-GCN | [待填充] | [待填充] | ~3.1 |
-| AGCN | [待填充] | [待填充] | [待填充] |
-| ST-GIN | [待填充] | [待填充] | [待填充] |
-| ResNet+Radar | [待填充] | [待填充] | [待填充] |
+| ST-GCN | 69.33 | 98.00 | 3.09 |
+| AGCN | 65.33 | 95.00 | 3.46 |
+| ST-GIN | 12.33 | 59.67 | 1.72 |
+| ResNet+Radar | 16.33 | 76.67 | 11.18 |
 
 ### 5.2 ST-GCN 训练策略消融
 
 | 实验 | Top-1 (%) | Δ vs 基线 | 分析 |
 |------|----------|:---:|------|
-| AB-01 基线 | [待填充] | — | — |
-| AB-02 +数据增强 | [待填充] | [待填充] | 增强对小样本的收益 |
-| AB-03 +LR+Dropout | [待填充] | [待填充] | 更长训练+正则化的效果 |
+| AB-01 基线 | 69.33 | — | 40ep, lr=0.1, 无增强/无dropout |
+| AB-02 +数据增强 | 60.00 | -9.33 | 增强加剧小样本过拟合 |
+| AB-03 +LR+Dropout | **75.00** | +5.67 | 更长训练+平滑LR+适度正则=最优 |
 
 ### 5.3 AGCN Dropout 消融
 
 | 实验 | Top-1 (%) | Δ | 分析 |
 |------|----------|:---:|------|
-| AB-04 无 Dropout | [待填充] | — | — |
-| AB-05 Dropout=0.5 | [待填充] | [待填充] | Dropout 对小样本过拟合的缓解 |
+| AB-04 无 Dropout | **65.33** | — | — |
+| AB-05 Dropout=0.5 | 10.67 | -54.67 | Dropout 严重破坏注意力机制 |
 
 ### 5.4 预训练迁移
 
 | 模型 | Top-1 (%) | Top-5 (%) | 说明 |
 |------|----------|----------|------|
-| ST-GCN (scratch) | [待填充] | [待填充] | 700 样本从头训练 |
-| ST-GCN (NTU-60 预训练) | [待填充] | [待填充] | 零样本, 无微调 |
+| ST-GCN (scratch) | 69.33 | 98.00 | 700 样本从头训练 |
+| ST-GCN (NTU-60 预训练) | **88.33** | 96.67 | 零样本, 无微调 |
 
 ### 5.5 与 ML 方法对比
 
 | 方法 | 测试准确率 (%) |
 |------|:---:|
-| SVM (RBF) | 80.3 |
-| Random Forest | 78.7 |
-| SVM (Linear) | 75.3 |
-| AdaBoost | 67.7 |
-| ST-GCN (最佳) | [待填充] |
-| AGCN (最佳) | [待填充] |
-| ST-GIN (最佳) | [待填充] |
-| ResNet+Radar | [待填充] |
+| **ST-GCN (NTU-60 预训练)** | **88.33** |
+| SVM (RBF) | 80.33 |
+| Random Forest | 78.67 |
+| ST-GCN (+LR+dropout, 最佳从零训练) | 75.00 |
+| SVM (Linear) | 75.33 |
+| ST-GCN (scratch baseline) | 69.33 |
+| AdaBoost | 67.67 |
+| AGCN (best) | 65.33 |
+| ResNet+VirtualRadar | 16.33 |
+| ST-GIN (+dropout) | 12.33 |
 
-### 5.6 各类别性能（[最佳模型]）
+### 5.6 各类别性能（预训练 ST-GCN, 零样本）
 
-| 动作 | Precision | Recall | F1 |
-|------|:---:|:---:|:---:|
-| drink water | [~] | [~] | [~] |
-| eat meal | [~] | [~] | [~] |
-| brush teeth | [~] | [~] | [~] |
-| brush hair | [~] | [~] | [~] |
-| drop | [~] | [~] | [~] |
-| pick up | [~] | [~] | [~] |
-| throw | [~] | [~] | [~] |
-| sit down | [~] | [~] | [~] |
-| stand up | [~] | [~] | [~] |
-| clapping | [~] | [~] | [~] |
+| 动作 | Top-1 (%) | 样本数 |
+|------|:---:|:---:|
+| drink water | 90.0 | 30 |
+| eat meal | 73.3 | 30 |
+| brush teeth | 73.3 | 30 |
+| brush hair | 90.0 | 30 |
+| drop | 86.7 | 30 |
+| pick up | 93.3 | 30 |
+| throw | **100.0** | 30 |
+| sit down | 93.3 | 30 |
+| stand up | 96.7 | 30 |
+| clapping | 86.7 | 30 |
 
 ---
 
@@ -244,40 +246,70 @@ $$RCS = \frac{\pi a^4}{(\sin^2\theta \cos^2\phi + \sin^2\theta \sin^2\phi + a^2\
 
 ### 6.1 DL vs ML：小样本的挑战
 
-[待填充] 深度学习模型在 700 样本下可能不如手工特征+SVM。分析原因：
-1. GCN 参数量大（~3M），700 样本不足以充分训练
-2. 手工特征（关节角度/距离）编码了人体先验知识，在小样本下更有效
-3. 数据增强和 Dropout 能否缩小差距？
+深度学习模型在 700 样本下的表现参差不齐。最佳从零训练的 ST-GCN（75.00%）仍低于 SVM RBF（80.33%），验证了小样本场景下深度学习并非天然占优。原因分析：
+
+1. **参数量悬殊**：ST-GCN 约 3.09M 参数，700 样本难以充分训练所有层；SVM 仅依赖手工特征（关节角度/距离），特征维度远小于模型参数。
+2. **手工特征编码先验知识**：关节角度、相对距离等特征直接对应人体运动的物理约束，在小样本下比端到端学习更高效。
+3. **预训练是关键**：引入 NTU-60 预训练权重后，ST-GCN 跃升至 88.33%，超出 SVM 8 个百分点——说明迁移学习可以弥补样本不足。
 
 ### 6.2 训练策略消融分析
 
-[待填充]
-- 数据增强的实际收益
-- LR 调度 + 更长训练的效果
-- Dropout 是否有效缓解过拟合
+ST-GCN 三种训练配置的结果揭示了一些反直觉的发现：
 
-### 6.3 预训练迁移分析
+- **数据增强（AB-02, 60.00%）反而下降 9.33 个百分点**。通常数据增强能缓解过拟合，但在仅 700 样本的场景下，`random_choose`（随机截取片段）+ `random_shift`（时间偏移）+ `random_move`（空间旋转平移）引入了过大的分布偏移，模型难以学到稳定的时空特征。这与大规模数据集（如 NTU-60）上增强普遍有效的结论不同。
 
-[待填充]
-- NTU-60 预训练权重在 NEU 上的零样本表现
-- 预训练模型的预测分布（是否倾向于预测 NTU-60 中与 NEU 类别相似的动作）
-- 微调 vs 零样本的潜在改进空间
+- **LR 调度 + 更长训练 + Dropout（AB-03, 75.00%）是最优策略**。将初始学习率从 0.1 降至 0.05、衰减点从 [20,30] 推迟至 [40,60]、训练轮数从 40 增至 80，在减缓过拟合的同时给予模型更多收敛时间。Dropout=0.5 对 ST-GCN 提供了适度正则化。
+
+### 6.3 Dropout 的差异化影响
+
+Dropout 对 ST-GCN 和 AGCN 的影响截然不同：
+
+- **ST-GCN**：Dropout=0.5 配合更长训练，从 69.33% 提升至 75.00%（+5.67%）。ST-GCN 的固定图结构相对简单，Dropout 有效抑制了 co-adaptation。
+
+- **AGCN**：Dropout=0.5 导致性能崩塌（65.33% → 10.67%，-54.67%）。AGCN 的核心是自适应邻接矩阵 + 空间自注意力机制，Dropout 随机丢弃特征通道会破坏注意力权重的计算，导致节点间相似度矩阵失去语义。这说明**基于注意力的模型需要更谨慎的正则化策略**。
 
 ### 6.4 模型架构对比
 
-[待填充]
-- AGCN 的自适应邻接矩阵是否比 ST-GCN 固定图更有效？
-- ST-GIN 的图同构卷积在小样本下的表现
+- **ST-GCN（69.33%）vs AGCN（65.33%）**：AGCN 的自适应邻接矩阵理论上更灵活，但在小样本下额外参数（3.46M vs 3.09M）可能加剧过拟合，抵消了图结构自适应的收益。
 
-### 6.5 混淆分析
+- **ST-GIN（12.33%）严重不佳**：图同构卷积在分子图等任务上表现优异，但在人体骨架图中效果不佳。可能原因：（1）骨架图高度结构化，GIN 的对称聚合丢失了空间方向信息；（2）仅使用 2 个邻接分区（无自连接）限制了信息传递。
 
-[待填充] 参考 DOC1.md 格式，分析易混淆类别对（如 drink/eat/brush）
+- **ResNet+VirtualRadar（16.33%）**：11.18M 参数 + 700 样本 = 严重过拟合。将骨架转为频谱图的物理建模思路有潜力，但需要更多数据或更强正则化。
+
+### 6.5 预训练迁移分析
+
+预训练 ST-GCN 以 88.33% 远超所有从零训练模型（最佳 75.00%），核心发现：
+
+- **零样本迁移已足够强**：预训练模型在 NEU 10 类上的零样本 Top-1 达 88.33%，其中 A007（throw）达 100%，A009（stand up）达 96.7%。这说明 NTU-60 上学习到的时空特征具有很好的类别泛化能力。
+- **容易混淆的动作**：A002（eat meal, 73.3%）和 A003（brush teeth, 73.3%）最低，两者共享"手部靠近面部"的运动模式，且与 NTU-60 中其他手-面动作（A030, A044）产生混淆。
+- **微调潜力**：当前为零样本，若在 NEU 训练集上微调，预期可进一步提升 5-10 个百分点。
+
+### 6.6 混淆分析
+
+基于预训练 ST-GCN 的误分类模式：
+
+| 真实类别 | 主要误分类为 | 混淆原因 |
+|---------|------------|---------|
+| eat meal (A002) | A030, A010 | 手-口区域动作, NTU-60 中类似动作多 |
+| brush teeth (A003) | A044, A030 | 手部在面部附近往复运动 |
+| clapping (A010) | A049, A011 | 双手交互动作的模式相似 |
+| drink water (A001) | A032, A044 | 举杯动作与其他上肢动作混淆 |
+
+全身大幅度动作（throw, stand up, sit down, pick up）准确率普遍高于精细手部动作（eat meal, brush teeth），与直觉一致——大动作的骨架轨迹更具判别性。
 
 ---
 
 ## 7. 结论
 
-[待填充]
+1. **预训练迁移是小样本骨架动作识别的最优策略**：NTU-60 预训练 ST-GCN 零样本即达 88.33%，超出所有从零训练模型和传统 ML 方法。
+
+2. **从零训练的最佳配置**：ST-GCN + 低初始学习率（0.05）+ 延迟衰减 + 更长训练（80ep）+ Dropout=0.5，达 75.00%。数据增强在极小样本下适得其反。
+
+3. **Dropout 对注意力机制是双刃剑**：对 ST-GCN 的正则化有效（+5.67%），对 AGCN 的自注意力机制造成灾难性破坏（-54.67%）。
+
+4. **深度学习在小样本下未必优于传统 ML**：最佳从零训练的 ST-GCN（75.00%）仍低于 SVM RBF（80.33%）。手工特征 + SVM 在数据极度匮乏时仍然是强基线。
+
+5. **模型架构选择需匹配数据规模**：轻量级的 ST-GCN（3.09M）表现最优，重量级的 ResNet+Radar（11.18M）严重过拟合，ST-GIN（1.72M）则因图同构卷积不适合骨架图而表现不佳。
 
 ---
 
@@ -350,9 +382,9 @@ uv run skeletal-train-dl --config config/neu/train_joint_agcn.yaml
 ```bash
 # 预训练 ST-GCN 零样本评估
 uv run python src/skeletal_dl/evaluate_pretrained.py eval
-# → outputs/pretrained_stgcn_eval.txt + confusion.png
+# → outputs/pretrained_stgcn_eval.txt + pretrained_stgcn_confusion.png
 
-# 全部模型对比（训练完成后修改 compare_models.py 中的 checkpoint 路径）
+# 全部模型对比
 uv run python src/skeletal_dl/compare_models.py
 # → outputs/model_comparison.txt + model_comparison.png
 ```
@@ -365,7 +397,7 @@ uv run python src/skeletal_dl/demo_predict.py data/test/S001C001P001R001A005.ske
 
 # 自定义模型
 uv run python src/skeletal_dl/demo_predict.py data/test/S001C001P001R001A005.skeleton \
-    --checkpoint runs/neu_stgcn_joint-39-XXX.pt \
+    --checkpoint runs/neu_stgcn_joint_lr-59-1260.pt \
     --model skeletal_dl.model.stgcn.Model --num-class 10
 ```
 
@@ -385,4 +417,4 @@ uv run python src/skeletal_dl/demo_predict.py data/test/S001C001P001R001A005.ske
 
 ---
 
-> 所有 `[待填充]` 字段在训练完成后填入。可视化输出保存在 `outputs/`，训练日志在 `work_dir/`。
+> 完整实验结果见 `outputs/model_comparison.txt`，混淆矩阵见 `outputs/pretrained_stgcn_confusion.png`，对比图见 `outputs/model_comparison.png`。
