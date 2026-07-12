@@ -10,6 +10,10 @@ dependencies = [
     "pandas>=3.0.3",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.1",
+    "torch>=2.0.0",
+    "tensorboardx>=2.0",
+    "tqdm>=4.60",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -17,13 +21,17 @@ skeletal-train = "skeletal_ml.cli.train:main"
 skeletal-eval = "skeletal_ml.cli.evaluate:main"
 skeletal-predict = "skeletal_ml.cli.predict:main"
 skeletal-show = "skeletal_ml.cli.show:main"
+skeletal-train-dl = "skeletal_ml.cli.train_dl:main"
+skeletal-ensemble = "skeletal_dl.ensemble:main"
+skeletal-gendata = "skeletal_dl.data_gen.neu_gendata:main"
+skeletal-genbone = "skeletal_dl.data_gen.gen_neu_bone:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/skeletal_ml"]
+packages = ["src/skeletal_ml", "src/skeletal_dl"]
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
