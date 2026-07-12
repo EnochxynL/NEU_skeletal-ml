@@ -21,6 +21,10 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+# Enable Chinese font display on Windows
+plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+
 # -- Config -------------------------------------------------------------------
 
 VAL_DATA = "./data/neu/val_data_joint.npy"

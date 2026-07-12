@@ -498,7 +498,7 @@ class Processor():
             print('best accuracy: ', self.best_acc, ' model_name: ', self.arg.model_saved_name)
 
         elif self.arg.phase == 'test':
-            if not self.arg.test_feeder_args['debug']:
+            if not self.arg.test_feeder_args.get('debug', False):
                 wf = self.arg.model_saved_name + '_wrong.txt'
                 rf = self.arg.model_saved_name + '_right.txt'
             else:
@@ -535,7 +535,7 @@ def main():
     # load arg form config file
     p = parser.parse_args()
     if p.config is not None:
-        with open(p.config, 'r') as f:
+        with open(p.config, 'r', encoding='utf-8') as f:
             default_arg = yaml.safe_load(f)
         key = vars(p).keys()
         for k in default_arg.keys():

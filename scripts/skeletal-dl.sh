@@ -9,8 +9,6 @@
 #    bash scripts/skeletal-dl.sh demo <file>        # Visualize prediction
 #    bash scripts/skeletal-dl.sh all                # Train all + eval + compare
 # ============================================================================
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_DIR"
@@ -107,7 +105,7 @@ train_all() {
         echo -e "${CYAN}========================================================${NC}"
         echo -e "${CYAN}  [$i/$total]  $key${NC}"
         echo -e "${CYAN}========================================================${NC}"
-        train_one "$key"
+        train_one "$key" || warn "Training $key failed (exit code $?), continuing..."
         i=$((i + 1))
     done
 
@@ -145,7 +143,7 @@ eval_all() {
             log "  Testing $key with $latest_ckpt"
             uv run skeletal-train-dl --config "$config" \
                 --phase test --weights "$latest_ckpt" \
-                --model_saved_name "./runs/neu_${key}_joint_test" || true
+                -model_saved_name "./runs/neu_${key}_joint_test" || true
         else
             warn "  No checkpoint found for $key (skip)"
         fi
@@ -209,8 +207,9 @@ demo() {
 
 # ============================================================================
 cmd_all() {
-    train_all "$@"
+    train_all "$@" || warn "Some training tasks failed, continuing..."
     eval_all
+    demo
 }
 
 # ============================================================================

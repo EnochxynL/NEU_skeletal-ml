@@ -66,7 +66,7 @@ class Feeder(Dataset):
             data_numpy = (data_numpy - self.mean_map) / self.std_map
         if self.random_shift:
             data_numpy = tools.random_shift(data_numpy)
-        if self.random_choose:
+        if self.random_choose and self.window_size > 0:
             data_numpy = tools.random_choose(data_numpy, self.window_size)
         elif self.window_size > 0:
             data_numpy = tools.auto_pading(data_numpy, self.window_size)

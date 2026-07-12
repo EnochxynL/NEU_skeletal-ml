@@ -43,7 +43,7 @@ def auto_pading(data_numpy, size, random_pad=False):
 def random_choose(data_numpy, size, auto_pad=True):
     # input: C,T,V,M 随机选择其中一段，不是很合理。因为有0
     C, T, V, M = data_numpy.shape
-    if T == size:
+    if size <= 0 or T == size:
         return data_numpy
     elif T < size:
         if auto_pad:

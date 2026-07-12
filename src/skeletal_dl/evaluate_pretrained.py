@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader, Dataset
 
 # -- Paths --
 CHECKPOINT_PATH = "D:/ACTIVE/NEUAI/mmskeleton/checkpoints/st_gcn.ntu-xsub-300b57d4.pth"
-DATA_PATH = "./data/neu/val_data_joint.npy"
-LABEL_PATH = "./data/neu/val_label.pkl"
+DATA_PATH = "D:/ACTIVE/NEUAI/mmskeleton/data/NEU/test_data.npy"
+LABEL_PATH = "D:/ACTIVE/NEUAI/mmskeleton/data/NEU/test_label.pkl"
 NUM_CLASS = 60  # NTU-60 pre-trained model
 NUM_NEU_CLASSES = 10
 
@@ -32,8 +32,14 @@ ACTION_NAMES = [
 
 
 def build_model():
+    """Build ST-GCN with the ORIGINAL ST-GCN spatial graph (paper version).
+
+    The mmskeleton pre-trained checkpoint was trained with the original
+    spatial configuration partitioning (root / centripetal / centrifugal),
+    NOT the 2s-AGCN inward/outward partitioning used elsewhere in this project.
+    We construct the correct adjacency matrix and inject it into the model.
+    """
     from skeletal_dl.model.stgcn import Model
-    from skeletal_dl.graph.ntu_rgb_d import Graph
 
     model = Model(
         num_class=NUM_CLASS,
@@ -42,11 +48,85 @@ def build_model():
         graph="skeletal_dl.graph.ntu_rgb_d.Graph",
         graph_args={"labeling_mode": "spatial"},
     )
+
+    # Replace adjacency matrix with the original ST-GCN spatial partitioning
+    ref_A = _build_original_stgcn_graph()
+    model.register_buffer('A', torch.tensor(ref_A, dtype=torch.float32))
+
     ckpt = torch.load(CHECKPOINT_PATH, map_location="cpu")
     state_dict = ckpt.get("state_dict", ckpt)
     model.load_state_dict(state_dict, strict=True)
     model.eval()
     return model
+
+
+def _build_original_stgcn_graph():
+    """Construct the original ST-GCN spatial adjacency matrix.
+
+    This matches the paper's partitioning (root / centripetal / centrifugal
+    with global normalization), exactly as in the reference mmskeleton
+    implementation.  The pre-trained weights were trained on this graph.
+    """
+    import numpy as np
+
+    num_node = 25
+    self_link = [(i, i) for i in range(num_node)]
+    neighbor_1base = [(1, 2), (2, 21), (3, 21), (4, 3), (5, 21),
+                      (6, 5), (7, 6), (8, 7), (9, 21), (10, 9),
+                      (11, 10), (12, 11), (13, 1), (14, 13),
+                      (15, 14), (16, 15), (17, 1), (18, 17),
+                      (19, 18), (20, 19), (22, 23), (23, 8),
+                      (24, 25), (25, 12)]
+    neighbor_link = [(i - 1, j - 1) for (i, j) in neighbor_1base]
+    edge = self_link + neighbor_link
+    center = 21 - 1
+
+    max_hop = 1
+    A_mat = np.zeros((num_node, num_node))
+    for i, j in edge:
+        A_mat[j, i] = 1
+        A_mat[i, j] = 1
+
+    hop_dis = np.zeros((num_node, num_node)) + np.inf
+    transfer_mat = [np.linalg.matrix_power(A_mat, d) for d in range(max_hop + 1)]
+    arrive_mat = np.stack(transfer_mat) > 0
+    for d in range(max_hop, -1, -1):
+        hop_dis[arrive_mat[d]] = d
+
+    # Normalize full adjacency matrix
+    adjacency = np.zeros((num_node, num_node))
+    for hop in range(max_hop + 1):
+        adjacency[hop_dis == hop] = 1
+    Dl = np.sum(adjacency, axis=0)
+    Dn = np.zeros((num_node, num_node))
+    for i in range(num_node):
+        if Dl[i] > 0:
+            Dn[i, i] = Dl[i] ** (-1)
+    normalize_adjacency = np.dot(adjacency, Dn)
+
+    # Spatial partitioning: root / centripetal / centrifugal
+    valid_hop = range(0, max_hop + 1)
+    A = []
+    for hop in valid_hop:
+        a_root = np.zeros((num_node, num_node))
+        a_close = np.zeros((num_node, num_node))
+        a_further = np.zeros((num_node, num_node))
+        for i in range(num_node):
+            for j in range(num_node):
+                if hop_dis[j, i] == hop:
+                    if hop_dis[j, center] == hop_dis[i, center]:
+                        a_root[j, i] = normalize_adjacency[j, i]
+                    elif hop_dis[j, center] > hop_dis[i, center]:
+                        a_close[j, i] = normalize_adjacency[j, i]
+                    else:
+                        a_further[j, i] = normalize_adjacency[j, i]
+        if hop == 0:
+            A.append(a_root)
+        else:
+            A.append(a_root + a_close)
+            A.append(a_further)
+
+    return np.stack(A)
 
 
 def read_skeleton(file):
@@ -120,7 +200,6 @@ def plot_confusion_matrix(labels, preds, save_path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    import seaborn as sns
 
     true_classes = sorted(set(labels))
     pred_classes = sorted(set(preds))
@@ -131,21 +210,30 @@ def plot_confusion_matrix(labels, preds, save_path):
     for t, p in zip(labels, preds):
         cm[true_idx[t], pred_idx[p]] += 1
 
-    # Map to 0-based class indices (these are the actual NEU labels)
     row_names = [f"A{c+1:03d} ({ACTION_NAMES[c]})" if c < len(ACTION_NAMES) else f"A{c+1:03d}" for c in true_classes]
     col_names = [f"A{c+1:03d} ({ACTION_NAMES[c]})" if c < len(ACTION_NAMES) and c < NUM_NEU_CLASSES else f"A{c+1:03d}" for c in pred_classes]
 
     fig_w = max(8, len(pred_classes) * 0.5)
     fig_h = max(6, len(true_classes) * 0.5)
-    plt.figure(figsize=(fig_w, fig_h))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=col_names, yticklabels=row_names,
-                cbar_kws={"label": "count"})
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.title(f"Pre-trained ST-GCN on NEU 10-class test set\n"
-              f"({len(true_classes)} true x {len(pred_classes)} predicted classes)")
-    plt.xticks(rotation=45, ha="right")
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+    im = ax.imshow(cm, cmap="Blues", aspect="auto")
+
+    # Annotate each cell
+    for i in range(len(true_classes)):
+        for j in range(len(pred_classes)):
+            ax.text(j, i, str(cm[i, j]), ha="center", va="center",
+                    fontsize=8, fontweight="bold",
+                    color="white" if cm[i, j] > cm.max() / 2 else "black")
+
+    ax.set_xticks(range(len(pred_classes)))
+    ax.set_yticks(range(len(true_classes)))
+    ax.set_xticklabels(col_names, rotation=45, ha="right", fontsize=8)
+    ax.set_yticklabels(row_names, fontsize=8)
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
+    ax.set_title(f"Pre-trained ST-GCN on NEU 10-class test set\n"
+                 f"({len(true_classes)} true x {len(pred_classes)} predicted classes)")
+    fig.colorbar(im, ax=ax, label="count")
     plt.tight_layout()
     plt.savefig(save_path, dpi=150)
     plt.close()
