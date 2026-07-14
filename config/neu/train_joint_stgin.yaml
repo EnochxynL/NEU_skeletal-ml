@@ -21,7 +21,7 @@ model_args:
   graph: skeletal_dl.graph.ntu_rgb_d.Graph
   graph_args:
     labeling_mode: spatial
-  dropout: 0.5
+  dropout: 0.1
 weight_decay: 0.0001
 base_lr: 0.1
 step:
