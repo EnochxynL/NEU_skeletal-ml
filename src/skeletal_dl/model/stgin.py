@@ -45,7 +45,7 @@ class SpatioTemporalGraphConv(nn.Module):
                 _bn_init(m, 1)
 
         self.relu = nn.ReLU(inplace=True)
-        self.dropout = nn.Dropout2d(dropout) if dropout else None
+        self.dropout = nn.Dropout(dropout) if dropout else None
         self._residual_flag = residual
         self._residual = None
 
