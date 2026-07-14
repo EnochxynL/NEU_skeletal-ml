@@ -119,9 +119,9 @@ class Model(nn.Module):
         x = x.permute(0, 1, 3, 4, 2).contiguous()
         x = x.view(N * M, C, T, V)
 
-        # GraphIsoConvTD adds its own self-loop (eye with epsilon), so skip
-        # the graph's self-loop partition (A[0]) and pass only edge partitions
-        A = torch.from_numpy(self.graph.A[1:].astype('float32')).to(x.device)
+        # Match TF reference: pass self-loops + inward edges (A[:2]).
+        # GraphIsoConvTD adds its own learnable self-loop (eye with epsilon).
+        A = torch.from_numpy(self.graph.A[:2].astype('float32')).to(x.device)
         for layer in self.layers:
             x, A = layer(x, A)
 
