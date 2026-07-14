@@ -254,11 +254,16 @@ def load_trained_model(entry, ckpt_path):
     ModelCls = _import_class(entry["model"])
     model = ModelCls(num_class=entry["num_class"], num_point=25, num_person=2,
                      **entry["model_args"])
-    # Trigger lazy module initialization (e.g. ST-GIN residual blocks)
-    dummy = torch.randn(2, 3, 300, 25, 2)
+    # Trigger lazy module init (ST-GIN residual blocks) and handle models
+    # that hardcode .cuda() or .to('cuda:0') in __init__ (VirtualRadar/AGCN).
+    # Do the dummy forward on CUDA (if available), then move to CPU for loading.
+    init_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = model.to(init_device)
+    dummy = torch.randn(2, 3, 300, 25, 2).to(init_device)
     model.eval()
     with torch.no_grad():
         model(dummy)
+    model = model.cpu()
     weights = torch.load(ckpt_path, map_location="cpu")
     model.load_state_dict(weights, strict=True)
     model.eval()
