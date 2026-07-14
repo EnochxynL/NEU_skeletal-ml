@@ -24,15 +24,30 @@ $env:PYTHONPATH = "$ProjectDir\src;$env:PYTHONPATH"
 # -- Config paths --
 $ConfigDir = "config/neu"
 $CONFIGS = @{
-    "stgcn"         = "$ConfigDir/train_joint_stgcn.yaml"
-    "stgcn_aug"     = "$ConfigDir/train_joint_stgcn_aug.yaml"
-    "stgcn_lr"      = "$ConfigDir/train_joint_stgcn_lr.yaml"
-    "agcn"          = "$ConfigDir/train_joint_agcn.yaml"
-    "agcn_dropout"  = "$ConfigDir/train_joint_agcn_dropout.yaml"
-    "stgin"         = "$ConfigDir/train_joint_stgin.yaml"
-    "resnet"        = "$ConfigDir/train_joint_resnet.yaml"
+    "stgcn"          = "$ConfigDir/train_joint_stgcn.yaml"
+    "stgcn_aug"      = "$ConfigDir/train_joint_stgcn_aug.yaml"
+    "stgcn_lr"       = "$ConfigDir/train_joint_stgcn_lr.yaml"
+    "agcn"           = "$ConfigDir/train_joint_agcn.yaml"
+    "agcn_dropout"   = "$ConfigDir/train_joint_agcn_dropout.yaml"
+    "agcn_dropout2d" = "$ConfigDir/train_joint_agcn_dropout2d.yaml"
+    "stgin"          = "$ConfigDir/train_joint_stgin.yaml"
+    "resnet"         = "$ConfigDir/train_joint_resnet.yaml"
 }
-$ORDERED_KEYS = @("stgcn", "stgcn_aug", "stgcn_lr", "agcn", "agcn_dropout", "stgin", "resnet")
+$ORDERED_KEYS = @("stgcn", "stgcn_aug", "stgcn_lr", "agcn", "agcn_dropout", "agcn_dropout2d", "stgin", "resnet")
+
+# -- Checkpoint glob patterns (handles non-standard naming like neu_stgcn_joint_aug-*.pt) --
+function Get-CkptPattern($key) {
+    $CKPT_PATTERNS = @{
+        "stgcn_aug"      = "runs/neu_stgcn_joint_aug-*.pt"
+        "stgcn_lr"       = "runs/neu_stgcn_joint_lr-*.pt"
+        "agcn_dropout"   = "runs/neu_agcn_joint_dropout-*.pt"
+        "agcn_dropout2d" = "runs/neu_agcn_joint_dropout2d-*.pt"
+    }
+    if ($CKPT_PATTERNS.ContainsKey($key)) {
+        return $CKPT_PATTERNS[$key]
+    }
+    return "runs/neu_${key}_joint-*.pt"
+}
 
 # -- Helpers --
 function log($msg)   { Write-Host "[$(Get-Date -Format HH:mm:ss)] $msg" -ForegroundColor Green }
@@ -148,7 +163,7 @@ function Eval-All {
     log "3/3  Per-model test evaluation..."
     foreach ($key in $ORDERED_KEYS) {
         $config = $CONFIGS[$key]
-        $latestCkpt = Get-ChildItem "runs/neu_${key}_joint-*.pt" -ErrorAction SilentlyContinue |
+        $latestCkpt = Get-ChildItem (Get-CkptPattern $key) -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if ($latestCkpt) {
             log "  Testing $key with $($latestCkpt.Name)"
@@ -197,7 +212,7 @@ function Demo {
     $bestCkpt = $null
     $bestModel = ""
     foreach ($key in @("stgcn_lr", "agcn_dropout", "stgin")) {
-        $ckpt = Get-ChildItem "runs/neu_${key}_joint-*.pt" -ErrorAction SilentlyContinue |
+        $ckpt = Get-ChildItem (Get-CkptPattern $key) -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if ($ckpt) {
             $bestCkpt = $ckpt.FullName

@@ -114,7 +114,7 @@ class TCN_GCN_unit(nn.Module):
         self.gcn1 = unit_gcn(in_channels, out_channels, A)
         self.tcn1 = unit_tcn(out_channels, out_channels, stride=stride)
         self.relu = nn.ReLU()
-        self.dropout = nn.Dropout(dropout) if dropout else None
+        self.dropout = nn.Dropout2d(dropout) if dropout else None
         if not residual:
             self.residual = lambda x: 0
 

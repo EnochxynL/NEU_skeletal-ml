@@ -23,10 +23,23 @@ declare -A CONFIGS=(
     ["stgcn_lr"]="$CONFIG_DIR/train_joint_stgcn_lr.yaml"
     ["agcn"]="$CONFIG_DIR/train_joint_agcn.yaml"
     ["agcn_dropout"]="$CONFIG_DIR/train_joint_agcn_dropout.yaml"
+    ["agcn_dropout2d"]="$CONFIG_DIR/train_joint_agcn_dropout2d.yaml"
     ["stgin"]="$CONFIG_DIR/train_joint_stgin.yaml"
     ["resnet"]="$CONFIG_DIR/train_joint_resnet.yaml"
 )
-ORDERED_KEYS=("stgcn" "stgcn_aug" "stgcn_lr" "agcn" "agcn_dropout" "stgin" "resnet")
+ORDERED_KEYS=("stgcn" "stgcn_aug" "stgcn_lr" "agcn" "agcn_dropout" "agcn_dropout2d" "stgin" "resnet")
+
+# -- Checkpoint glob patterns (handles non-standard naming like neu_stgcn_joint_aug-*.pt) --
+get_ckpt_pattern() {
+    local key="$1"
+    case "$key" in
+        stgcn_aug)       echo "runs/neu_stgcn_joint_aug-*.pt" ;;
+        stgcn_lr)        echo "runs/neu_stgcn_joint_lr-*.pt" ;;
+        agcn_dropout)    echo "runs/neu_agcn_joint_dropout-*.pt" ;;
+        agcn_dropout2d)  echo "runs/neu_agcn_joint_dropout2d-*.pt" ;;
+        *)               echo "runs/neu_${key}_joint-*.pt" ;;
+    esac
+}
 
 # -- Colors --
 GREEN='\033[0;32m'
@@ -138,7 +151,8 @@ eval_all() {
     log "3/3  Per-model test evaluation..."
     for key in "${ORDERED_KEYS[@]}"; do
         local config="${CONFIGS[$key]}"
-        local latest_ckpt=$(ls -t runs/neu_${key}_joint-*.pt 2>/dev/null | head -1)
+        local pattern=$(get_ckpt_pattern "$key")
+        local latest_ckpt=$(ls -t $pattern 2>/dev/null | head -1)
         if [ -n "$latest_ckpt" ]; then
             log "  Testing $key with $latest_ckpt"
             uv run skeletal-train-dl --config "$config" \
@@ -183,8 +197,9 @@ demo() {
     log "  [2/2] Best trained checkpoint..."
     local best_ckpt=""
     local best_model=""
-    for key in stgcn_lr agcn_dropout stgin; do
-        local ckpt=$(ls -t runs/neu_${key}_joint-*.pt 2>/dev/null | head -1)
+    for key in stgcn_lr agcn_dropout agcn_dropout2d stgin; do
+        local pattern=$(get_ckpt_pattern "$key")
+        local ckpt=$(ls -t $pattern 2>/dev/null | head -1)
         if [ -n "$ckpt" ]; then
             best_ckpt="$ckpt"
             case "$key" in
@@ -222,7 +237,7 @@ print_help() {
     echo "Commands:"
     echo "  train [model]     Train all models, or a specific one"
     echo "                    models: stgcn | stgcn_aug | stgcn_lr | agcn |"
-    echo "                            agcn_dropout | stgin | resnet"
+    echo "                            agcn_dropout | agcn_dropout2d | stgin | resnet"
     echo "  eval              Run all evaluations (pre-trained + comparison)"
     echo "  demo <file>       Visualize prediction on a .skeleton file"
     echo "  all               Train all + evaluate"

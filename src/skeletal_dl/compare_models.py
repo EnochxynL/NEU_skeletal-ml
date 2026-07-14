@@ -82,7 +82,7 @@ MODEL_ENTRIES = [
         },
     },
     {
-        "name": "AGCN (+dropout)",
+        "name": "AGCN (+Dropout)",
         "key": "agcn_dropout",
         "ckpt_pattern": "runs/neu_agcn_joint_dropout-*.pt",
         "model": "skeletal_dl.model.agcn_dropout.Model",
@@ -94,14 +94,26 @@ MODEL_ENTRIES = [
         },
     },
     {
-        "name": "ST-GIN (+dropout)",
+        "name": "AGCN (+Dropout2d)",
+        "key": "agcn_dropout2d",
+        "ckpt_pattern": "runs/neu_agcn_joint_dropout2d-*.pt",
+        "model": "skeletal_dl.model.agcn_dropout2d.Model",
+        "num_class": 10,
+        "model_args": {
+            "graph": "skeletal_dl.graph.ntu_rgb_d.Graph",
+            "graph_args": {"labeling_mode": "spatial"},
+            "dropout": 0.5,
+        },
+    },
+    {
+        "name": "ST-GIN (+Dropout fix)",
         "key": "stgin",
         "model": "skeletal_dl.model.stgin.Model",
         "num_class": 10,
         "model_args": {
             "graph": "skeletal_dl.graph.ntu_rgb_d.Graph",
             "graph_args": {"labeling_mode": "spatial"},
-            "dropout": 0.5,
+            "dropout": 0.1,
         },
     },
     {
@@ -242,8 +254,13 @@ def load_trained_model(entry, ckpt_path):
     ModelCls = _import_class(entry["model"])
     model = ModelCls(num_class=entry["num_class"], num_point=25, num_person=2,
                      **entry["model_args"])
+    # Trigger lazy module initialization (e.g. ST-GIN residual blocks)
+    dummy = torch.randn(2, 3, 300, 25, 2)
+    model.eval()
+    with torch.no_grad():
+        model(dummy)
     weights = torch.load(ckpt_path, map_location="cpu")
-    model.load_state_dict(weights, strict=False)
+    model.load_state_dict(weights, strict=True)
     model.eval()
     return model, entry["num_class"]
 
