@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-skeletal-train = "skeletal_ml.cli.train:main"
+skeletal-train-ml = "skeletal_ml.cli.train_ml:main"
 skeletal-eval = "skeletal_ml.cli.evaluate:main"
 skeletal-predict = "skeletal_ml.cli.predict:main"
 skeletal-show = "skeletal_ml.cli.show:main"
