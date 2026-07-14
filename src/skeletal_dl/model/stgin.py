@@ -119,8 +119,9 @@ class Model(nn.Module):
         x = x.permute(0, 1, 3, 4, 2).contiguous()
         x = x.view(N * M, C, T, V)
 
-        # ST-GIN uses only first 2 adjacency partitions (no self-connections)
-        A = torch.from_numpy(self.graph.A[:2].astype('float32')).to(x.device)
+        # GraphIsoConvTD adds its own self-loop (eye with epsilon), so skip
+        # the graph's self-loop partition (A[0]) and pass only edge partitions
+        A = torch.from_numpy(self.graph.A[1:].astype('float32')).to(x.device)
         for layer in self.layers:
             x, A = layer(x, A)
 
